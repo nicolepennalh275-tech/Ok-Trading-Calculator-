@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Phase Trade System</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: Arial;
+  background: #0b1220;
+  color: white;
+  display: flex;
+  justify-content: center;
+  padding: 15px;
+}
+
+.container {
+  width: 100%;
+  max-width: 450px;
+}
+
+h2 {
+  text-align: center;
+}
+
+.card {
+  background: #111827;
+  padding: 12px;
+  border-radius: 12px;
+  margin-bottom: 10px;
+}
+
+input {
+  width: 100%;
+  padding: 10px;
+  margin-top: 5px;
+  border-radius: 8px;
+  border: none;
+  background: #1f2937;
+  color: white;
+}
+
+button {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 10px;
+  font-weight: bold;
+  margin-top: 8px;
+}
+
+.win { background: #22c55e; color: black; }
+.lose { background: #ef4444; color: white; }
+
+.reset {
+  width: 35px;
+  height: 35px;
+  padding: 0;
+  border-radius: 8px;
+  background: #64748b;
+  color: white;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  margin: 6px 0;
+}
+
+.item {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px;
+  background: #111827;
+  margin-top: 5px;
+  border-radius: 8px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>📊 Ok Trading Calculator</h2>
+
+<!-- CALCULATOR -->
+<div class="card">
+  <h3>Calculator</h3>
+
+  <label>Capital</label>
+  <input id="capital" type="number" value="10">
+
+  <label>Multiplier</label>
+  <input id="multiplier" type="number" value="2.5" step="0.1">
+
+  <label>Phases</label>
+  <input id="phases" type="number" value="8">
+
+  <button class="win" onclick="calculate()">Calculate</button>
+
+  <div class="row">
+    <span>Total Balance</span>
+    <b id="balance">10.00</b>
+  </div>
+</div>
+
+<div id="calcResult"></div>
+
+<!-- SIMULATOR -->
+<div class="card">
+  <h3>Simulator</h3>
+
+  <label>Phase Limit</label>
+  <input id="limit" type="number" value="8">
+
+  <div class="row">
+    <span>Current Phase</span>
+    <b id="phase">1</b>
+  </div>
+
+  <div class="row">
+    <span>Wins</span>
+    <b id="wins">0</b>
+  </div>
+
+  <div class="row">
+    <span>Losses</span>
+    <b id="losses">0</b>
+  </div>
+
+  <div class="row">
+    <span>Profit</span>
+    <b id="profit">0.00</b>
+  </div>
+
+  <div class="row">
+    <span>Balance</span>
+    <b id="totalBalance">10.00</b>
+  </div>
+
+  <button class="win" onclick="win()">WIN</button>
+  <button class="lose" onclick="loss()">LOSS</button>
+  <button class="reset" onclick="resetSim()">↻</button>
+</div>
+
+</div>
+
+<script>
+
+let phase = 1;
+let winCount = 0;
+let lossCount = 0;
+let profit = 0;
+let lastPhaseAmount = 0;
+
+/* CALCULATE */
+function calculate() {
+
+  let C = parseFloat(document.getElementById("capital").value);
+  let r = parseFloat(document.getElementById("multiplier").value);
+  let n = parseInt(document.getElementById("phases").value);
+
+  document.getElementById("balance").innerText = C.toFixed(2);
+
+  let denom = Math.pow(r, n) - 1;
+  let start = (C * (r - 1)) / denom;
+
+  let html = `<div class="card"><h3>Phase Breakdown</h3>`;
+
+  for (let i = 0; i < n; i++) {
+    let v = start * Math.pow(r, i);
+
+    html += `
+      <div class="item">
+        <span>Phase ${i + 1}</span>
+        <span>${v.toFixed(2)}</span>
+      </div>
+    `;
+  }
+
+  html += `</div>`;
+
+  document.getElementById("calcResult").innerHTML = html;
+
+  lastPhaseAmount = start;
+  updateBalance();
+}
+
+/* UPDATE UI */
+function updateUI() {
+  document.getElementById("phase").innerText = phase;
+  document.getElementById("wins").innerText = winCount;
+  document.getElementById("losses").innerText = lossCount;
+  document.getElementById("profit").innerText = profit.toFixed(2);
+  updateBalance();
+}
+
+/* BALANCE = CAPITAL + PROFIT */
+function updateBalance() {
+  let capital = parseFloat(document.getElementById("capital").value);
+  let total = capital + profit;
+
+  document.getElementById("totalBalance").innerText = total.toFixed(2);
+}
+
+/* WIN */
+function win() {
+  winCount++;
+
+  let r = parseFloat(document.getElementById("multiplier").value);
+
+  profit += lastPhaseAmount * Math.pow(r, phase - 1);
+
+  phase = 1;
+
+  updateUI();
+}
+
+/* LOSS */
+function loss() {
+  lossCount++;
+
+  let r = parseFloat(document.getElementById("multiplier").value);
+
+  profit -= lastPhaseAmount * Math.pow(r, phase - 1);
+
+  let limit = parseInt(document.getElementById("limit").value);
+
+  phase++;
+
+  if (phase > limit) {
+    phase = 1;
+  }
+
+  updateUI();
+}
+
+/* RESET */
+function resetSim() {
+  phase = 1;
+  winCount = 0;
+  lossCount = 0;
+  profit = 0;
+
+  updateUI();
+}
+
+updateUI();
+
+</script>
+
+</body>
+  </html>
