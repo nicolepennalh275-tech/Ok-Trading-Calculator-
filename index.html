@@ -26,7 +26,7 @@ h2 {
 }
 
 .card {
-  background: #111827;
+  background: ;
   padding: 12px;
   border-radius: 12px;
   margin-bottom: 10px;
@@ -62,9 +62,18 @@ button {
   background: #64748b;
   color: white;
   font-size: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+}
+
+.tabBtn {
+  width: 49%;
+  display: inline-block;
+  margin-bottom: 10px;
+  background: #1f2937;
+}
+
+.activeTab {
+  background: #22c55e;
+  color: black;
 }
 
 .row {
@@ -73,13 +82,48 @@ button {
   margin: 6px 0;
 }
 
-.item {
-  display: flex;
-  justify-content: space-between;
-  padding: 8px;
-  background: #111827;
-  margin-top: 5px;
-  border-radius: 8px;
+canvas {
+  width: 100%;
+  background: #0b1220;
+  border-radius: 10px;
+}
+
+.stakeBox {
+  text-align: center;
+  background: #0f172a;
+  padding: 15px;
+  border-radius: 12px;
+  margin-bottom: 10px;
+}
+
+.stakeLabel {
+  font-size: 14px;
+  opacity: 0.7;
+}
+
+.stakeValue {
+  font-size: 34px;
+  font-weight: bold;
+  color: #22c55e;
+}
+
+#resultMsg {
+  text-align: center;
+  font-weight: bold;
+  margin-bottom: 10px;
+  font-size: 16px;
+}
+
+table {
+  width: 100%;
+  font-size: 12px;
+  border-collapse: collapse;
+}
+
+th, td {
+  padding: 6px;
+  border-bottom: 1px solid #333;
+  text-align: center;
 }
 </style>
 </head>
@@ -88,37 +132,41 @@ button {
 
 <div class="container">
 
-<h2>📊 Ok Trading Calculator</h2>
+<h2>Ok Trading Simulator</h2>
 
-<!-- CALCULATOR -->
+<button class="tabBtn activeTab" onclick="showTab('sim')">Simulator</button>
+<button class="tabBtn" onclick="showTab('history')">History</button>
+
+<!-- SIMULATOR -->
+<div id="simTab">
+
 <div class="card">
-  <h3>Calculator</h3>
-
   <label>Capital</label>
   <input id="capital" type="number" value="10">
 
   <label>Multiplier</label>
-  <input id="multiplier" type="number" value="2.5" step="0.1">
+  <input id="multiplier" type="number" value="2.5">
 
   <label>Phases</label>
   <input id="phases" type="number" value="8">
 
-  <button class="win" onclick="calculate()">Calculate</button>
+  <label>Max Capital Limit (optional)</label>
+  <input id="maxCap" type="number">
 
-  <div class="row">
-    <span>Total Balance</span>
-    <b id="balance">10.00</b>
-  </div>
+  <button class="win" onclick="initSystem()">Initialize System</button>
 </div>
 
-<div id="calcResult"></div>
+<div id="resultMsg"></div>
 
-<!-- SIMULATOR -->
+<div class="stakeBox">
+  <div class="stakeLabel">Current Stake</div>
+  <div id="stake" class="stakeValue">0.000</div>
+</div>
+
 <div class="card">
-  <h3>Simulator</h3>
 
-  <label>Phase Limit</label>
-  <input id="limit" type="number" value="8">
+<label>Phase Limit</label>
+<input id="limit" type="number" value="8">
 
   <div class="row">
     <span>Current Phase</span>
@@ -141,13 +189,46 @@ button {
   </div>
 
   <div class="row">
-    <span>Balance</span>
-    <b id="totalBalance">10.00</b>
+    <span style="font-size:12px; opacity:0.6;">Balance</span>
+    <b id="totalBalance" style="font-size:14px;">10.000</b>
   </div>
 
   <button class="win" onclick="win()">WIN</button>
   <button class="lose" onclick="loss()">LOSS</button>
   <button class="reset" onclick="resetSim()">↻</button>
+
+</div>
+
+</div>
+
+<!-- HISTORY TAB -->
+<div id="historyTab" style="display:none" class="card">
+
+<div class="card">
+<h3>🧠 Insights</h3>
+<div id="insights"></div>
+</div>
+
+<div class="card">
+<h3>📅 Daily Summary</h3>
+<div id="daily"></div>
+</div>
+
+<div class="card">
+<h3>📊 Trade History</h3>
+
+<button class="lose" onclick="clearHistory()">🗑 Clear History</button>
+
+<table>
+<thead>
+<tr>
+<th>#</th><th>Time</th><th>Result</th><th>Phase</th><th>Stake</th><th>Profit</th><th>Balance</th>
+</tr>
+</thead>
+<tbody id="historyTable"></tbody>
+</table>
+</div>
+
 </div>
 
 </div>
@@ -158,67 +239,81 @@ let phase = 1;
 let winCount = 0;
 let lossCount = 0;
 let profit = 0;
-let lastPhaseAmount = 0;
 
-/* CALCULATE */
-function calculate() {
+let phaseTable = [];
+let balanceHistory = [];
 
+/* TAB */
+function showTab(tab){
+  document.getElementById("simTab").style.display = tab==="sim"?"block":"none";
+  document.getElementById("historyTab").style.display = tab==="history"?"block":"none";
+}
+
+/* STORAGE */
+function saveTrade(obj){
+  let data = JSON.parse(localStorage.getItem("trades")||"[]");
+  data.push(obj);
+  localStorage.setItem("trades", JSON.stringify(data));
+}
+
+function getTrades(){
+  return JSON.parse(localStorage.getItem("trades")||"[]");
+}
+
+/* INIT */
+function initSystem() {
+  buildPhaseTable();
+  updateUI();
+  showMsg("🔄 System Initialized");
+}
+
+/* BUILD */
+function buildPhaseTable() {
   let C = parseFloat(document.getElementById("capital").value);
   let r = parseFloat(document.getElementById("multiplier").value);
   let n = parseInt(document.getElementById("phases").value);
 
-  document.getElementById("balance").innerText = C.toFixed(2);
-
   let denom = Math.pow(r, n) - 1;
   let start = (C * (r - 1)) / denom;
 
-  let html = `<div class="card"><h3>Phase Breakdown</h3>`;
+  phaseTable = [];
 
   for (let i = 0; i < n; i++) {
-    let v = start * Math.pow(r, i);
-
-    html += `
-      <div class="item">
-        <span>Phase ${i + 1}</span>
-        <span>${v.toFixed(2)}</span>
-      </div>
-    `;
+    phaseTable.push(start * Math.pow(r, i));
   }
-
-  html += `</div>`;
-
-  document.getElementById("calcResult").innerHTML = html;
-
-  lastPhaseAmount = start;
-  updateBalance();
 }
 
-/* UPDATE UI */
-function updateUI() {
-  document.getElementById("phase").innerText = phase;
-  document.getElementById("wins").innerText = winCount;
-  document.getElementById("losses").innerText = lossCount;
-  document.getElementById("profit").innerText = profit.toFixed(2);
-  updateBalance();
-}
-
-/* BALANCE = CAPITAL + PROFIT */
-function updateBalance() {
-  let capital = parseFloat(document.getElementById("capital").value);
-  let total = capital + profit;
-
-  document.getElementById("totalBalance").innerText = total.toFixed(2);
+function getStake() {
+  return phaseTable[phase - 1] || 0;
 }
 
 /* WIN */
 function win() {
   winCount++;
 
-  let r = parseFloat(document.getElementById("multiplier").value);
+  let stake = getStake();
+  let multiplier = parseFloat(document.getElementById("multiplier").value);
+  let winProfit = stake * (multiplier - 1);
 
-  profit += lastPhaseAmount * Math.pow(r, phase - 1);
+  profit += winProfit;
 
+  let capitalInput = document.getElementById("capital");
+  let currentCapital = parseFloat(capitalInput.value);
+
+  let newCapital = currentCapital + winProfit;
+
+  let maxCap = parseFloat(document.getElementById("maxCap").value);
+  if (!isNaN(maxCap) && newCapital >= maxCap) {
+    newCapital = maxCap;
+  }
+
+  capitalInput.value = newCapital.toFixed(3);
+
+  saveTrade(makeTrade("WIN", stake, winProfit, newCapital));
+
+  profit = 0;
   phase = 1;
+  buildPhaseTable();
 
   updateUI();
 }
@@ -227,27 +322,99 @@ function win() {
 function loss() {
   lossCount++;
 
-  let r = parseFloat(document.getElementById("multiplier").value);
+  let stake = getStake();
+  profit -= stake;
 
-  profit -= lastPhaseAmount * Math.pow(r, phase - 1);
-
-  let limit = parseInt(document.getElementById("limit").value);
+  saveTrade(makeTrade("LOSS", stake, -stake, getBalance()));
 
   phase++;
 
-  if (phase > limit) {
-    phase = 1;
-  }
+  let limit = parseInt(document.getElementById("limit").value);
+  if (phase > limit) phase = 1;
 
   updateUI();
 }
 
-/* RESET */
+function makeTrade(result, stake, profitVal, balance){
+  let now = new Date();
+  return {
+    result,
+    phase,
+    stake: stake.toFixed(3),
+    profit: profitVal.toFixed(3),
+    balance: balance.toFixed(3),
+    date: now.toISOString().split("T")[0],
+    time: now.toLocaleTimeString()
+  };
+}
+
+function getBalance(){
+  return parseFloat(document.getElementById("capital").value) + profit;
+}
+
+/* UI */
+function updateUI() {
+  document.getElementById("phase").innerText = phase;
+  document.getElementById("wins").innerText = winCount;
+  document.getElementById("losses").innerText = lossCount;
+  document.getElementById("profit").innerText = profit.toFixed(2);
+  document.getElementById("totalBalance").innerText = getBalance().toFixed(3);
+  document.getElementById("stake").innerText = getStake().toFixed(3);
+
+  renderHistory();
+}
+
+function showMsg(text) {
+  document.getElementById("resultMsg").innerText = text;
+  setTimeout(() => {
+    document.getElementById("resultMsg").innerText = "";
+  }, 10000);
+}
+
+/* HISTORY */
+function renderHistory(){
+  let trades = getTrades();
+
+  let table="";
+  trades.forEach((t,i)=>{
+    table+=`<tr>
+    <td>${i+1}</td>
+    <td>${t.time}</td>
+    <td>${t.result}</td>
+    <td>${t.phase}</td>
+    <td>${t.stake}</td>
+    <td>${t.profit}</td>
+    <td>${t.balance}</td>
+    </tr>`;
+  });
+  document.getElementById("historyTable").innerHTML = table;
+
+  let winsN = trades.filter(t=>t.result==="WIN").length;
+  let total = trades.length;
+  let winRate = total ? ((winsN/total)*100).toFixed(1) : 0;
+
+  document.getElementById("insights").innerHTML =
+  `Trades: ${total}<br>Win Rate: ${winRate}%<br>Wins: ${winsN}<br>Losses: ${total-winsN}`;
+}
+
+/* CLEAR */
+function clearHistory(){
+  if(confirm("Delete all history?")){
+    localStorage.removeItem("trades");
+    renderHistory();
+  }
+}
+
 function resetSim() {
   phase = 1;
   winCount = 0;
   lossCount = 0;
   profit = 0;
+  balanceHistory = [];
+
+  buildPhaseTable();
+
+  showMsg("🔄 Reset Completed");
 
   updateUI();
 }
@@ -257,4 +424,4 @@ updateUI();
 </script>
 
 </body>
-</html>
+  </html>
