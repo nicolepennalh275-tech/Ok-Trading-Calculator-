@@ -70,6 +70,19 @@ button {
 .win { background: #22c55e; color: black; }
 .lose { background: #ef4444; color: white; }
 
+.actionBox {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.bigBtn {
+  width: 50%;
+  height: 80px;
+  font-size: 20px;
+  font-weight: bold;
+}
 .reset {
   width: 35px;
   height: 35px;
@@ -93,19 +106,6 @@ canvas {
   width: 100%;
   background: #0b1220;
   border-radius: 10px;
-}
-  .actionBox {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  margin-top: 10px;
-}
-
-.bigBtn {
-  width: 50%;
-  height: 80px;
-  font-size: 20px;
-  font-weight: bold;
 }
 
 /* STAKE */
@@ -201,7 +201,11 @@ canvas {
   <div class="row">
     <span style="font-size:12px; opacity:0.6;">Balance</span>
     <b id="totalBalance" style="font-size:14px;">10.000</b>
-  <div class="actionBox">
+  </div>
+
+ 
+
+<div class="actionBox">
   <button class="win bigBtn" onclick="win()">WIN</button>
   <button class="lose bigBtn" onclick="loss()">LOSS</button>
 </div>
@@ -435,4 +439,4 @@ updateUI();
 </script>
 
 </body>
-</html>
+  </html>
